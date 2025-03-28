@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Created by Alexander Kuvichko [amk] 2025-03-20
+# LICENSE: Feel free to use this script as you want
+# A script to add a shared mailbox and assign users to it
+# Launch it from wsl or from a Linux vm
+
+
+# ******* Set mailbox address, its name and its description below
+email="test-xxx@domain.ru"
+name="TEST SHARED MAILBOX"
+description="TEST SHARED MAILBOX DESCRIPTION"
+
+# ******* Declare the list of aliases separated by spaces
+declare -a mails=("user1@domain.ru" "user2@domain.ru" "user3@domain.ru")
+# ******* You are ready.
+# Make sure the script can be executed (chmod +x ./shared-mailbox).
+# Launch ./shared-mailbox
+
+# Change maxpage if org employee quota was updated
+# Keep in mind $employeesTotal [1234, total org quota foy Y360] <= $maxpage * $perPage (perPage=100 for stability reasons; see below)
+# Set the total number of employees in your organization
+employeesTotal=1234
+# Change below only if you're sure what you're doing
+perPage=100
+maxpage=$(( $employeesTotal / $perPage + 1 ))
+role="shared_mailbox_owner"
+# End of declarations
+
+# Make sure you did set the following environment variables:
+# export orgid=....
+# export oauth360=...
+# oauth360 should be "OAuth y0_fff<token_data>xxx"
+function checkEnvironmentVariable {
+   res=$(printenv $1)
+   len=${#res}
+   if [[ $len -eq 0 ]]
+    then
+        echo $1" environment variable is not set"
+        exit 1
+    fi
+}
+
+declare -a envvars=("orgid" "oauth360")
+for item in ${envvars[@]}
+do
+    checkEnvironmentVariable $item
+done
+
+# Make sure curl and jq are available
+# Checking requirements
+function checkUtilityAvailability {
+    res=$(which $1)
+    len=${#res}
+    if [[ $len -eq 0 ]]
+    then
+        echo $1" is not available, please install it"
+        exit 1
+    fi
+}
+
+declare -a requirements=("jq" "curl")
+for item in ${requirements[@]}
+do
+    checkUtilityAvailability $item
+done
+# End of checking requirements
+
+echo "Starting script"
+
+resp=$(curl --silent -X "PUT" -H "Authorization: $oauth360" -H "Content-Type: application/json" -d '{ "email": "'"$email"'", "name": "'"$name"'", "description": "'"$description"'" }' "https://api360.yandex.net/admin/v1/org/$orgid/mailboxes/shared")
+
+# Checking if the mailbox was created
+if [[ $resp != *"resourceId"* ]]; then
+   echo "Error:"
+   echo $resp | jq
+   exit 1
+fi
+
+# Obtaining mailbox id
+mailboxID=$(echo $resp | jq '.resourceId')
+mailboxID=$(echo $mailboxID | tr -d '"')
+echo "Created shared mailbox "$email" with ID "$mailboxID
+
+# Processing emails
+for usr in "${mails[@]}"
+do
+   m2=0
+   echo "Searching for "$usr
+   # Searching for the used id by email
+   for page in $(seq 1 $maxpage);
+   do
+      i=0        
+      for m in $(curl --silent -X "GET" -H "Authorization: $oauth360" -H "Content-Type: application/json" -d '{ "page": '"$page"', "perPage": '"$perPage"' }' "https://api360.yandex.net/directory/v1/org/$orgid/users" | jq '.users.[] | select(.email=="'"$usr"'") | .id')
+      do
+         # We run hele if jq filtered a non-empty result
+         m2=$(echo $m | tr -d '"')
+         break 2 #Break two loops
+      done
+   done
+   # In case of incorrect user alias or if perPage search failed
+   if (($m2==0))
+   then
+      echo Not found
+   else
+      # Request access. Here we do not care if the user already has an access
+      restask=$(curl --silent -X "POST" -H "Authorization: $oauth360" -H "Content-Type: application/json" -d '{ "roles": ["'"$role:"'"] }' "https://api360.yandex.net/admin/v1/org/$orgid/mailboxes/set/$mailboxID?actorId=$m2&notify=all" | jq)
+      echo Processed
+      # Echo async taks id
+      echo $restask
+   fi
+done
