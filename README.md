@@ -40,6 +40,6 @@ Assigning role is "Mailbox Owner" you may change it as per Y360 documentation
 ### Launch
 
 Make sure the script can be executed
-- `chmod +x ./shared-mailbox`
-- Launch `./shared-mailbox`
+- `chmod +x ./y360-shared-mailbox`
+- Launch `./y360-shared-mailbox`
   
