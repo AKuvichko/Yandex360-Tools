@@ -18,7 +18,7 @@ declare -a mails=("user1@domain.ru" "user2@domain.ru" "user3@domain.ru")
 # Launch ./shared-mailbox
 
 # Change maxpage if org employee quota was updated
-# Keep in mind $employeesTotal [1234, total org quota foy Y360] <= $maxpage * $perPage (perPage=100 for stability reasons; see below)
+# Keep in mind $employeesTotal [1234, total org quota for Y360] <= $maxpage * $perPage (perPage=100 for stability reasons; see below)
 # Set the total number of employees in your organization
 employeesTotal=1234
 # Change below only if you're sure what you're doing
