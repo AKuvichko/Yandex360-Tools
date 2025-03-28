@@ -14,8 +14,8 @@ description="TEST SHARED MAILBOX DESCRIPTION"
 # ******* Declare the list of aliases separated by spaces
 declare -a mails=("user1@domain.ru" "user2@domain.ru" "user3@domain.ru")
 # ******* You are ready.
-# Make sure the script can be executed (chmod +x ./shared-mailbox).
-# Launch ./shared-mailbox
+# Make sure the script can be executed (chmod +x ./y360-shared-mailbox).
+# Launch ./y360-shared-mailbox
 
 # Change maxpage if org employee quota was updated
 # Keep in mind $employeesTotal [1234, total org quota for Y360] <= $maxpage * $perPage (perPage=100 for stability reasons; see below)
